@@ -1,0 +1,25 @@
+---
+- name: Install apache files
+  block:
+    - name: insure that appache installed
+      ansible.builtin.yum: 
+       name: httpd
+       state: present
+    - name: Copy sample index.php
+      ansible.builtin.copy:
+        src:  /home/john/Desktop/lamp-stack/roles/apache/files/index.php
+        dest: /var/www/html/index.php
+        mode: '0644'
+        remote_src: yes
+      notify: Restart Apache
+  rescue:
+    - name: Handle Apache installation failure
+      debug:
+        msg: "Failed to install or configure Apache."
+
+  always:
+    - name: Ensure Apache service is running
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: yes

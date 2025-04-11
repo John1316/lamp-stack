@@ -1,0 +1,99 @@
+- name: Install mysql
+  block: 
+    - name: Ensure to install mysql 
+      ansible.builtin.package:
+        state: present
+        name: mysql-server
+    - name: Set password
+      community.mysql.mysql_user:
+        login_user: root
+        login_password: "Fady@123"
+        name: root
+        password: "{{ mysql_password }}"
+        host_all: yes
+      notify: Restart MySQL
+    - name: Secure MySQL installation
+      ansible.builtin.shell:
+        cmd: |
+          mysql -uroot -p{{ mysql_password }} -e "DELETE FROM mysql.user WHERE User='';"
+          mysql -uroot -p{{ mysql_password }} -e "DROP DATABASE IF EXISTS test;"
+          mysql -uroot -p{{ mysql_password }} -e "FLUSH PRIVILEGES;"
+      args:
+        executable: /bin/bash
+      notify: Restart MySQL
+  rescue:
+    - name: Handle MySQL installation failure
+      ansible.builtin.debug:
+        msg: "Failed to install or secure MySQL."
+
+  always:
+    - name: Ensure MySQL service is running
+      ansible.builtin.service:
+        name: mysqld
+        state: started
+        enabled: yes
+        
+# - name: Install MySQL
+#   block: 
+#     - name: Ensure MySQL is installed
+#       ansible.builtin.package:
+#         state: present
+#         name: 
+#           - mysql-server
+#           - python3-PyMySQL  # Required for Ansible MySQL modules
+
+#     - name: Ensure MySQL service is started and enabled
+#       ansible.builtin.service:
+#         name: mysqld  # Note: service name is 'mysqld' on RHEL/CentOS
+#         state: started
+#         enabled: yes
+        
+#     - name: Check if MySQL root password is already set
+#       ansible.builtin.command: >
+#         mysql -u root -e "SELECT 1"
+#       register: mysql_root_check
+#       ignore_errors: yes
+#       changed_when: false
+#       no_log: true
+      
+#     - name: Set root password
+#       community.mysql.mysql_user:
+#         login_user: root
+#         login_password: ""
+#         name: root
+#         password: "{{ mysql_password }}"
+#         host_all: yes
+#       when: mysql_root_check.rc == 0  # Only if we can log in without password
+#       notify: Restart MySQL
+      
+#     - name: Create .my.cnf file with credentials
+#       ansible.builtin.template:
+#         src: my.cnf.j2
+#         dest: /root/.my.cnf
+#         owner: root
+#         group: root
+#         mode: '0600'
+#       no_log: true
+
+#     - name: Secure MySQL installation
+#       ansible.builtin.shell:
+#         cmd: |
+#           mysql -uroot -p"{{ mysql_password }}" -e "DELETE FROM mysql.user WHERE User='';"
+#           mysql -uroot -p"{{ mysql_password }}" -e "DROP DATABASE IF EXISTS test;"
+#           mysql -uroot -p"{{ mysql_password }}" -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+#           mysql -uroot -p"{{ mysql_password }}" -e "FLUSH PRIVILEGES;"
+#       args:
+#         executable: /bin/bash
+#       notify: Restart MySQL
+#       no_log: true
+      
+#   rescue:
+#     - name: Handle MySQL installation failure
+#       ansible.builtin.debug:
+#         msg: "Failed to install or secure MySQL."
+#   always:
+#     - name: Final check - Ensure MySQL service is running
+#       ansible.builtin.service:
+#         name: mysqld
+#         state: started
+#         enabled: yes

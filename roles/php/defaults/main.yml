@@ -1,0 +1,2 @@
+apache_php_module: "{{ 'libapache2-mod-php' if ansible_os_family == 'Debian' else 'php' }}"
+apache_service_name: "{{ 'apache2' if ansible_os_family == 'Debian' else 'httpd' }}"

@@ -1,0 +1,32 @@
+---
+- name: Install PHP and required modules
+  block:
+    - name: Ensure PHP is installed
+      ansible.builtin.package:
+        name:  php
+        state: present
+
+    - name: Ensure Apache PHP module is installed
+      ansible.builtin.package:
+        name: "{{ apache_php_module }}"
+        state: present
+      notify: Restart Apache
+
+    - name: Copy PHP info file for testing
+      ansible.builtin.copy:
+        src: index.php
+        dest: /var/www/html/info.php
+        mode: '0644'
+      notify: Restart Apache
+
+  rescue:
+    - name: Handle PHP installation failure
+      ansible.builtin.debug:
+        msg: "Failed to install PHP or configure Apache for PHP."
+
+  always:
+    - name: Ensure Apache service is running
+      ansible.builtin.service:
+        name: "{{ apache_service_name }}"
+        state: started
+        enabled: yes

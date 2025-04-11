@@ -1,0 +1,7 @@
+- name: Deploy lamp stack
+  hosts: 127.0.0.1
+  become: true
+  roles:
+    - apache
+    - mysql
+    - php
