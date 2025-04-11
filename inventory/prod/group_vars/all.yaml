@@ -1,0 +1,3 @@
+ansible_user: produser
+ansible_become_password: prodpassword
+mysql_root_password: "prodsecurepassword"

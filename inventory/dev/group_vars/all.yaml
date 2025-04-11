@@ -1,0 +1,3 @@
+ansible_user: devuser
+ansible_become_password: Fady@123
+mysql_root_password: "Fady@123"

@@ -1,3 +1,3 @@
 <?php
-echo "Apache installed successfully";
+echo "Apache installed successfully now";
 ?>

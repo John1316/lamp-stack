@@ -2,15 +2,20 @@
 - name: Install apache files
   block:
     - name: insure that appache installed
-      ansible.builtin.yum: 
-       name: httpd
-       state: present
+      ansible.builtin.package:
+        name: httpd
+        state: present
+      where: "{{ ansible_os_family == 'RedHat' }}"
+    - name: insure that appache installed
+      ansible.builtin.package:
+        name: apache2
+        state: present
+      where: "{{ ansible_os_family == 'Debian' }}"
     - name: Copy sample index.php
       ansible.builtin.copy:
-        src:  /home/john/Desktop/lamp-stack/roles/apache/files/index.php
+        src: index.php
         dest: /var/www/html/index.php
-        mode: '0644'
-        remote_src: yes
+        mode: "0644"
       notify: Restart Apache
   rescue:
     - name: Handle Apache installation failure
