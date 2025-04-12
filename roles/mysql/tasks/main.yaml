@@ -1,38 +1,83 @@
-- name: Install mysql
-  block: 
-    - name: Ensure to install mysql 
-      ansible.builtin.package:
-        state: present
-        name: mysql-server
-    - name: Set password
-      community.mysql.mysql_user:
-        login_user: root
-        login_password: "Fady@123"
-        name: root
-        password: "{{ mysql_password }}"
-        host_all: yes
-      notify: Restart MySQL
-    - name: Secure MySQL installation
-      ansible.builtin.shell:
-        cmd: |
-          mysql -uroot -p{{ mysql_password }} -e "DELETE FROM mysql.user WHERE User='';"
-          mysql -uroot -p{{ mysql_password }} -e "DROP DATABASE IF EXISTS test;"
-          mysql -uroot -p{{ mysql_password }} -e "FLUSH PRIVILEGES;"
-      args:
-        executable: /bin/bash
-      notify: Restart MySQL
-  rescue:
-    - name: Handle MySQL installation failure
-      ansible.builtin.debug:
-        msg: "Failed to install or secure MySQL."
+# - name: Install mysql
+#   block: 
+#     - name: Ensure to install mysql 
+#       ansible.builtin.package:
+#         state: present
+#         name: mysql-server
+#     - name: Set password
+#       community.mysql.mysql_user:
+#         login_user: root
+#         login_password: "Fady@123"
+#         name: root
+#         password: "{{ mysql_password }}"
+#         host_all: yes
+#       notify: Restart MySQL
+#     - name: Secure MySQL installation
+#       ansible.builtin.shell:
+#         cmd: |
+#           mysql -uroot -p{{ mysql_password }} -e "DELETE FROM mysql.user WHERE User='';"
+#           mysql -uroot -p{{ mysql_password }} -e "DROP DATABASE IF EXISTS test;"
+#           mysql -uroot -p{{ mysql_password }} -e "FLUSH PRIVILEGES;"
+#       args:
+#         executable: /bin/bash
+#       notify: Restart MySQL
+#   rescue:
+#     - name: Handle MySQL installation failure
+#       ansible.builtin.debug:
+#         msg: "Failed to install or secure MySQL."
 
-  always:
-    - name: Ensure MySQL service is running
-      ansible.builtin.service:
-        name: mysqld
-        state: started
-        enabled: yes
-        
+#   always:
+#     - name: Ensure MySQL service is running
+#       ansible.builtin.service:
+#         name: mysqld
+#         state: started
+#         enabled: yes
+# roles/mysql/tasks/main.yml
+---
+- name: Ensure to install mysql 
+  ansible.builtin.package:
+    state: present
+    name: mysql-server
+- name: Install Python MySQL dependencies
+  ansible.builtin.package:
+    name: 
+      - python3-PyMySQL
+      - python3-pip
+    state: present
+- name: Set root password
+  community.mysql.mysql_user:
+    login_user: root
+    login_password: "Fady@123"
+    name: root
+    password: "{{ mysql_password }}"
+    host_all: yes
+    connect_options:
+      login_unix_socket: /var/lib/mysql/mysql.sock
+    login_host: localhost
+  notify: Restart MySQL
+- name: Ensure MySQL plugin directory has correct permissions
+  ansible.builtin.file:
+    path: /var/lib/mysql/plugin
+    state: directory
+    owner: mysql
+    group: mysql
+    mode: '0755'
+    recurse: yes
+- name: Secure MySQL installation
+  ansible.builtin.shell:
+    cmd: |
+      mysql -uroot -p{{ mysql_password }} -e "DELETE FROM mysql.user WHERE User='';"
+      mysql -uroot -p{{ mysql_password }} -e "DROP DATABASE IF EXISTS test;"
+      mysql -uroot -p{{ mysql_password }} -e "FLUSH PRIVILEGES;"
+  args:
+    executable: /bin/bash
+  notify: Restart MySQL
+
+- name: Ensure MySQL service is running
+  ansible.builtin.service:
+    name: "{{ mysql_service_name | default('mysqld') }}"
+    state: started
+    enabled: yes
 # - name: Install MySQL
 #   block: 
 #     - name: Ensure MySQL is installed

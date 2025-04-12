@@ -3,7 +3,15 @@
   block:
     - name: Ensure PHP is installed
       ansible.builtin.package:
-        name:  php
+        name:  
+          - php
+          - php 
+          - php-mysqlnd 
+          - php-json 
+          - php-gd 
+          - php-mbstring 
+          - php-xml 
+          - php-zip
         state: present
 
     - name: Ensure Apache PHP module is installed

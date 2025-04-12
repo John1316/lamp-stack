@@ -5,12 +5,12 @@
       ansible.builtin.package:
         name: httpd
         state: present
-      where: "{{ ansible_os_family == 'RedHat' }}"
-    - name: insure that appache installed
-      ansible.builtin.package:
-        name: apache2
-        state: present
-      where: "{{ ansible_os_family == 'Debian' }}"
+      # where: "{{ ansible_os_family == 'RedHat' }}"
+    # - name: insure that appache installed
+    #   ansible.builtin.package:
+    #     name: apache2
+    #     state: present
+    #   where: "{{ ansible_os_family == 'Debian' }}"
     - name: Copy sample index.php
       ansible.builtin.copy:
         src: index.php
