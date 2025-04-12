@@ -83,7 +83,19 @@
         owner: root
         group: root
         mode: '0600'
-
+    # - name: Run mysql_secure_installation
+    #   ansible.builtin.expect:
+    #     command: mysql_secure_installation
+    #     responses:
+    #       'Enter current password for root.': "{{ mysql_password }}"
+    #       'Set root password.': 'n'
+    #       'Remove anonymous users.': 'y'
+    #       'Disallow root login remotely.': 'y'
+    #       'Remove test database and access to it.': 'y'
+    #       'Reload privilege tables now.': 'y'
+    #   register: secure_install
+    #   failed_when: false
+    #   changed_when: secure_install.rc == 0
     - name: Run mysql_secure_installation
       ansible.builtin.shell: |
         mysql -e "DELETE FROM mysql.user WHERE User='';"
