@@ -34,50 +34,106 @@
 #         enabled: yes
 # roles/mysql/tasks/main.yml
 ---
-- name: Ensure to install mysql 
-  ansible.builtin.package:
-    state: present
-    name: mysql-server
-- name: Install Python MySQL dependencies
-  ansible.builtin.package:
-    name: 
-      - python3-PyMySQL
-      - python3-pip
-    state: present
-- name: Set root password
-  community.mysql.mysql_user:
-    login_user: root
-    login_password: "Fady@123"
-    name: root
-    password: "{{ mysql_password }}"
-    host_all: yes
-    connect_options:
-      login_unix_socket: /var/lib/mysql/mysql.sock
-    login_host: localhost
-  notify: Restart MySQL
-- name: Ensure MySQL plugin directory has correct permissions
-  ansible.builtin.file:
-    path: /var/lib/mysql/plugin
-    state: directory
-    owner: mysql
-    group: mysql
-    mode: '0755'
-    recurse: yes
-- name: Secure MySQL installation
-  ansible.builtin.shell:
-    cmd: |
-      mysql -uroot -p{{ mysql_password }} -e "DELETE FROM mysql.user WHERE User='';"
-      mysql -uroot -p{{ mysql_password }} -e "DROP DATABASE IF EXISTS test;"
-      mysql -uroot -p{{ mysql_password }} -e "FLUSH PRIVILEGES;"
-  args:
-    executable: /bin/bash
-  notify: Restart MySQL
+  - name: Installtion for mariadb and mysql
+    block:
+    - name: Install MariaDB server
+      ansible.builtin.dnf:
+        name: mariadb-server
+        state: present
 
-- name: Ensure MySQL service is running
-  ansible.builtin.service:
-    name: "{{ mysql_service_name | default('mysqld') }}"
-    state: started
-    enabled: yes
+    - name: Start MariaDB service
+      ansible.builtin.systemd:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Wait for MariaDB to be ready
+      ansible.builtin.wait_for:
+        port: 3306
+        delay: 5
+        timeout: 30
+
+    - name: Install Python MySQL dependencies
+      ansible.builtin.package:
+        name: 
+          - python3-PyMySQL
+          - python3-pip
+        state: present
+
+    # Reset root password using more reliable method for fresh installations
+    - name: Reset root password with direct SQL
+      ansible.builtin.shell: |
+        mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('{{ mysql_password }}');" || \
+        mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_password }}';" || \
+        mysqladmin -u root password "{{ mysql_password }}"
+      become: yes
+      ignore_errors: yes
+      register: reset_result
+      changed_when: reset_result.rc == 0
+      notify: Restart MariaDB
+
+    # Create .my.cnf file for authentication
+    - name: Create .my.cnf file with credentials
+      ansible.builtin.copy:
+        content: |
+          [client]
+          user=root
+          password={{ mysql_password }}
+        dest: /root/.my.cnf
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Run mysql_secure_installation
+      ansible.builtin.shell: |
+        mysql -e "DELETE FROM mysql.user WHERE User='';"
+        mysql -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+        mysql -e "DROP DATABASE IF EXISTS test;"
+        mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+        mysql -e "FLUSH PRIVILEGES;"
+      args:
+        executable: /bin/bash
+      register: secure_db
+      changed_when: secure_db.rc == 0
+      failed_when: false
+      notify: Restart MariaDB
+
+    - name: Ensure MySQL plugin directory has correct permissions
+      ansible.builtin.file:
+        path: /var/lib/mysql/plugin
+        state: directory
+        owner: mysql
+        group: mysql
+        mode: '0755'
+        recurse: yes
+
+    - name: Secure MySQL installation
+      ansible.builtin.shell:
+        cmd: |
+          mysql -uroot -p{{ mysql_password }} -e "DELETE FROM mysql.user WHERE User='';"
+          mysql -uroot -p{{ mysql_password }} -e "DROP DATABASE IF EXISTS test;"
+          mysql -uroot -p{{ mysql_password }} -e "FLUSH PRIVILEGES;"
+      args:
+        executable: /bin/bash
+      notify: Restart MariaDB
+      
+    - name: Ensure MariaDB service is running
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: yes
+    
+    rescue:
+      - name: Handle MySQL installation failure
+        debug:
+          msg: "Failed to install or secure MySQL/MariaDB."
+          
+    always:
+      - name: Ensure MySQL service is running
+        service:
+          name: "{{ mysql_service_name }}"
+          state: started
+          enabled: yes
 # - name: Install MySQL
 #   block: 
 #     - name: Ensure MySQL is installed

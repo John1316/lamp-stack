@@ -1,2 +1,2 @@
 mysql_password: "Fady@123"
-mysql_service_name: "mysqld"
+mysql_service_name: "mariadb"
